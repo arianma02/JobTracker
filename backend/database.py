@@ -8,11 +8,13 @@ DEFAULT_DATABASE_URL = (
 )
 
 
-def get_connection():
-    database_url = os.getenv("JOBTRACK_DATABASE_URL", DEFAULT_DATABASE_URL)
+def get_database_url():
+    return os.getenv("JOBTRACK_DATABASE_URL", DEFAULT_DATABASE_URL)
 
+
+def get_connection():
     return psycopg.connect(
-        database_url,
+        get_database_url(),
         connect_timeout=3,
         options="-c timezone=UTC",
         row_factory=dict_row,
