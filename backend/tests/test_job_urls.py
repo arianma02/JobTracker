@@ -12,8 +12,10 @@ def save_job(client, url=None):
     return client.post(
         "/api/jobs",
         json={
-            "title": "Developer", "company": "Example AB",
-            "notes": "Keep my note", "preferred_url": url,
+            "title": "Developer",
+            "company": "Example AB",
+            "notes": "Keep my note",
+            "preferred_url": url,
         },
     )
 
@@ -27,9 +29,13 @@ def test_posting_url_and_comparison_key_are_stored_separately(client):
     assert job["preferred_url"] == url
     with get_connection() as connection:
         identifier = connection.execute(
-            "SELECT namespace, value FROM job_identifiers WHERE job_id = %s", (job["id"],)
+            "SELECT namespace, value FROM job_identifiers WHERE job_id = %s",
+            (job["id"],),
         ).fetchone()
-    assert identifier == {"namespace": "normalized-url", "value": "https://example.com/job?id=1"}
+    assert identifier == {
+        "namespace": "normalized-url",
+        "value": "https://example.com/job?id=1",
+    }
 
 
 def test_duplicate_url_preserves_existing_job_and_decisions(client):
@@ -45,8 +51,10 @@ def test_duplicate_url_preserves_existing_job_and_decisions(client):
     duplicate = client.post(
         "/api/jobs",
         json={
-            "title": "Replacement title", "company": "Another company",
-            "notes": "Replace this", "preferred_url": "https://EXAMPLE.com:443/job?id=1&utm_medium=x#top",
+            "title": "Replacement title",
+            "company": "Another company",
+            "notes": "Replace this",
+            "preferred_url": "https://EXAMPLE.com:443/job?id=1&utm_medium=x#top",
         },
     )
 
@@ -75,9 +83,14 @@ def test_jobs_without_urls_are_not_merged(client):
 @pytest.mark.parametrize(
     "url",
     [
-        "javascript:alert(1)", "file:///tmp/job", "/relative/job",
-        "https://user:password@example.com/job", "https://example.com:99999/job",
-        "https://example.com/a\nb", "https://example.com/a b", "https://example.com\\job",
+        "javascript:alert(1)",
+        "file:///tmp/job",
+        "/relative/job",
+        "https://user:password@example.com/job",
+        "https://example.com:99999/job",
+        "https://example.com/a\nb",
+        "https://example.com/a b",
+        "https://example.com\\job",
         "https://example.com/" + "x" * 2048,
         "https://example.com/" + "é" * 1100,
     ],
@@ -110,5 +123,7 @@ def test_simultaneous_duplicate_urls_do_not_leave_an_extra_job(client, monkeypat
     assert sorted(response.status_code for response in responses) == [201, 409]
     assert client.get("/api/jobs").json()["total"] == 1
     with get_connection() as connection:
-        total = connection.execute("SELECT count(*) AS total FROM job_identifiers").fetchone()
+        total = connection.execute(
+            "SELECT count(*) AS total FROM job_identifiers"
+        ).fetchone()
     assert total["total"] == 1

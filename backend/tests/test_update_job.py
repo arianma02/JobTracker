@@ -33,8 +33,17 @@ def test_notes_update_is_persisted_without_changing_encounter_times(client):
     assert updated_job["notes"] == "  Updated note  "
     assert updated_job["updated_at"] != before_update["updated_at"]
     for field in (
-        "id", "title", "company", "location", "preferred_url", "source",
-        "review_status", "application_status", "created_at", "first_seen_at", "last_seen_at",
+        "id",
+        "title",
+        "company",
+        "location",
+        "preferred_url",
+        "source",
+        "review_status",
+        "application_status",
+        "created_at",
+        "first_seen_at",
+        "last_seen_at",
     ):
         assert updated_job[field] == before_update[field]
     assert client.get(path).json() == updated_job

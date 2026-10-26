@@ -96,7 +96,10 @@ def test_text_and_both_status_filters_must_all_match(client):
 
     changes = [
         (matching_job["id"], {"review_status": "interested"}),
-        (already_applied["id"], {"review_status": "interested", "application_status": "applied"}),
+        (
+            already_applied["id"],
+            {"review_status": "interested", "application_status": "applied"},
+        ),
         (different_title["id"], {"review_status": "interested"}),
     ]
     for job_id, fields in changes:
@@ -104,7 +107,11 @@ def test_text_and_both_status_filters_must_all_match(client):
 
     response = client.get(
         "/api/jobs",
-        params={"q": "python", "review_status": "interested", "application_status": "not_applied"},
+        params={
+            "q": "python",
+            "review_status": "interested",
+            "application_status": "not_applied",
+        },
     )
 
     assert response.status_code == 200
@@ -119,8 +126,12 @@ def test_filtered_total_is_independent_of_page_size_and_offset(client):
     create_job(client, "Java developer")
     second_match = create_job(client, "Python tester")
 
-    first_response = client.get("/api/jobs", params={"q": "python", "limit": 1, "offset": 0})
-    second_response = client.get("/api/jobs", params={"q": "python", "limit": 1, "offset": 1})
+    first_response = client.get(
+        "/api/jobs", params={"q": "python", "limit": 1, "offset": 0}
+    )
+    second_response = client.get(
+        "/api/jobs", params={"q": "python", "limit": 1, "offset": 1}
+    )
 
     assert first_response.status_code == second_response.status_code == 200
     first_page = first_response.json()
@@ -128,7 +139,8 @@ def test_filtered_total_is_independent_of_page_size_and_offset(client):
     assert first_page["total"] == second_page["total"] == 2
     assert len(first_page["items"]) == len(second_page["items"]) == 1
     assert {first_page["items"][0]["id"], second_page["items"][0]["id"]} == {
-        first_match["id"], second_match["id"]
+        first_match["id"],
+        second_match["id"],
     }
 
     empty_page = client.get("/api/jobs", params={"q": "python", "offset": 2}).json()
@@ -138,7 +150,11 @@ def test_filtered_total_is_independent_of_page_size_and_offset(client):
 
 @pytest.mark.parametrize(
     "parameters",
-    [{"q": "x" * 201}, {"review_status": "applied"}, {"application_status": "interested"}],
+    [
+        {"q": "x" * 201},
+        {"review_status": "applied"},
+        {"application_status": "interested"},
+    ],
 )
 def test_invalid_search_parameters_are_rejected(client, parameters):
     response = client.get("/api/jobs", params=parameters)

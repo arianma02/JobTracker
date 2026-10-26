@@ -25,7 +25,13 @@ def create_job(job: JobCreate):
                     VALUES (%s, %s, %s, %s, %s)
                     RETURNING *
                     """,
-                    (job.title, job.company, job.location, job.notes, job.preferred_url),
+                    (
+                        job.title,
+                        job.company,
+                        job.location,
+                        job.notes,
+                        job.preferred_url,
+                    ),
                 )
                 created_job = cursor.fetchone()
 
@@ -45,7 +51,10 @@ def create_job(job: JobCreate):
                         connection.rollback()
                         existing_job = find_job_by_url(cursor, normalized_url)
                         if existing_job is None:
-                            raise HTTPException(status_code=409, detail="Job changed while saving; retry")
+                            raise HTTPException(
+                                status_code=409,
+                                detail="Job changed while saving; retry",
+                            )
                         raise HTTPException(
                             status_code=409,
                             detail={
@@ -67,6 +76,7 @@ def list_jobs(
     q: str | None = Query(default=None, max_length=200),
     review_status: ReviewStatus | None = None,
     application_status: ApplicationStatus | None = None,
+    applications_only: bool = False,
 ):
     conditions = []
     parameters = []
@@ -91,6 +101,10 @@ def list_jobs(
     if application_status is not None:
         conditions.append("application_status = %s")
         parameters.append(application_status)
+
+    if applications_only:
+        conditions.append("application_status <> %s")
+        parameters.append("not_applied")
 
     where_clause = ""
     if conditions:
@@ -138,7 +152,9 @@ def get_job(job_id: UUID):
 def update_job(job_id: UUID, job: JobPatch):
     changes = job.model_dump(exclude_unset=True)
     if not changes:
-        raise HTTPException(status_code=422, detail="Provide notes or a status to update")
+        raise HTTPException(
+            status_code=422, detail="Provide notes or a status to update"
+        )
 
     try:
         with get_connection() as connection:
