@@ -1,5 +1,7 @@
+from uuid import UUID
+
 import psycopg
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from database import get_connection
@@ -63,3 +65,46 @@ def create_job(job: JobCreate):
         raise HTTPException(status_code=503, detail="Database unavailable") from None
 
     return created_job
+
+
+@app.get("/api/jobs")
+def list_jobs(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=100000),
+):
+    try:
+        with get_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT count(*) AS total FROM jobs")
+                total = cursor.fetchone()["total"]
+
+                # The ID breaks timestamp ties so the ordering is deterministic.
+                cursor.execute(
+                    """
+                    SELECT * FROM jobs
+                    ORDER BY first_seen_at DESC, id DESC
+                    LIMIT %s OFFSET %s
+                    """,
+                    (limit, offset),
+                )
+                jobs = cursor.fetchall()
+    except psycopg.OperationalError:
+        raise HTTPException(status_code=503, detail="Database unavailable") from None
+
+    return {"items": jobs, "total": total, "limit": limit, "offset": offset}
+
+
+@app.get("/api/jobs/{job_id}")
+def get_job(job_id: UUID):
+    try:
+        with get_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM jobs WHERE id = %s", (job_id,))
+                job = cursor.fetchone()
+    except psycopg.OperationalError:
+        raise HTTPException(status_code=503, detail="Database unavailable") from None
+
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return job
