@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import App from "./App";
 
@@ -215,8 +221,125 @@ test("saving a job refreshes statuses on the current list page", async () => {
   await screen.findByText("Changes saved.");
   expect(screen.getByText("Updated notes")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Back to jobs" }));
-  await screen.findByText("Rejected");
+  await within(screen.getByRole("list")).findByText("Rejected");
   expect(screen.getByText("Showing 21–21 of 21 jobs.")).toBeTruthy();
   expect(fetchMock.mock.calls[3][1]?.method).toBe("PATCH");
   expect(fetchMock.mock.calls[4][0]).toBe("/api/jobs?limit=20&offset=20");
+});
+
+test("waits for Apply filters, trims search text, and encodes special characters", async () => {
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 1))
+    .mockResolvedValueOnce(jobPage(0, 0));
+  render(<App />);
+  await screen.findByText("Showing 1–1 of 1 jobs.");
+
+  fireEvent.change(screen.getByLabelText("Search recorded jobs"), {
+    target: { value: "  C++ & Python  " },
+  });
+  expect(fetchMock).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+
+  await screen.findByText("No jobs match these filters.");
+  expect(fetchMock.mock.calls[1][0]).toBe(
+    "/api/jobs?limit=20&offset=0&q=C%2B%2B+%26+Python",
+  );
+  expect(screen.queryByText("No jobs recorded yet.")).toBeNull();
+});
+
+test("combines filters, starts at offset zero, and retains filters during pagination", async () => {
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 21))
+    .mockResolvedValueOnce(jobPage(20, 21))
+    .mockResolvedValueOnce(jobPage(0, 21))
+    .mockResolvedValueOnce(jobPage(20, 21));
+  render(<App />);
+  await screen.findByText("Showing 1–20 of 21 jobs.");
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText("Showing 21–21 of 21 jobs.");
+  fireEvent.change(screen.getByLabelText("Search recorded jobs"), {
+    target: { value: "Developer" },
+  });
+  fireEvent.change(screen.getByLabelText("Review status filter"), {
+    target: { value: "interested" },
+  });
+  fireEvent.change(screen.getByLabelText("Application status filter"), {
+    target: { value: "not_applied" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+
+  await screen.findByText("Showing 1–20 of 21 jobs.");
+  expect(fetchMock.mock.calls[2][0]).toBe(
+    "/api/jobs?limit=20&offset=0&q=Developer&review_status=interested&application_status=not_applied",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText("Showing 21–21 of 21 jobs.");
+  expect(fetchMock.mock.calls[3][0]).toBe(
+    "/api/jobs?limit=20&offset=20&q=Developer&review_status=interested&application_status=not_applied",
+  );
+});
+
+test("Clear filters resets controls and requests the unfiltered list", async () => {
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 1))
+    .mockResolvedValueOnce(jobPage(0, 0))
+    .mockResolvedValueOnce(jobPage(0, 1));
+  render(<App />);
+  await screen.findByText("Showing 1–1 of 1 jobs.");
+  fireEvent.change(screen.getByLabelText("Search recorded jobs"), {
+    target: { value: "No matching job" },
+  });
+  fireEvent.change(screen.getByLabelText("Review status filter"), {
+    target: { value: "not_interested" },
+  });
+  fireEvent.change(screen.getByLabelText("Application status filter"), {
+    target: { value: "rejected" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+  await screen.findByText("No jobs match these filters.");
+
+  fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+  await screen.findByText("Showing 1–1 of 1 jobs.");
+  expect(fetchMock.mock.calls[2][0]).toBe("/api/jobs?limit=20&offset=0");
+  expect(
+    (screen.getByLabelText("Search recorded jobs") as HTMLInputElement).value,
+  ).toBe("");
+  expect(
+    (screen.getByLabelText("Review status filter") as HTMLSelectElement).value,
+  ).toBe("");
+  expect(
+    (screen.getByLabelText("Application status filter") as HTMLSelectElement)
+      .value,
+  ).toBe("");
+});
+
+test("creating a job clears filters so the new job is visible", async () => {
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 0))
+    .mockResolvedValueOnce(jobPage(0, 0))
+    .mockResolvedValueOnce(Response.json({ id: "1" }, { status: 201 }))
+    .mockResolvedValueOnce(jobPage(0, 1));
+  render(<App />);
+  await screen.findByText("No jobs recorded yet.");
+  fireEvent.change(screen.getByLabelText("Search recorded jobs"), {
+    target: { value: "Something else" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+  await screen.findByText("No jobs match these filters.");
+  fireEvent.change(screen.getByLabelText("Job title"), {
+    target: { value: "Developer 1" },
+  });
+  fireEvent.change(screen.getByLabelText("Company"), {
+    target: { value: "Example AB" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Add job" }));
+
+  await screen.findByRole("heading", { name: "Developer 1" });
+  expect(fetchMock.mock.calls[3][0]).toBe("/api/jobs?limit=20&offset=0");
+  expect(
+    (screen.getByLabelText("Search recorded jobs") as HTMLInputElement).value,
+  ).toBe("");
 });

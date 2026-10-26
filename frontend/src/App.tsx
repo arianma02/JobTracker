@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import AddJobForm from "./AddJobForm";
 import JobDetails from "./JobDetails";
-import { statusLabels, type JobPage } from "./jobs";
+import JobFilters from "./JobFilters";
+import {
+  emptyFilters,
+  statusLabels,
+  type JobFilterValues,
+  type JobPage,
+} from "./jobs";
 
 export default function App() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [refresh, setRefresh] = useState(0);
+  const [filters, setFilters] = useState<JobFilterValues>(emptyFilters);
   const [page, setPage] = useState<JobPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -18,7 +25,21 @@ export default function App() {
 
     async function loadJobs() {
       try {
-        const response = await fetch(`/api/jobs?limit=20&offset=${offset}`, {
+        const parameters = new URLSearchParams({
+          limit: "20",
+          offset: String(offset),
+        });
+        if (filters.q) {
+          parameters.set("q", filters.q);
+        }
+        if (filters.reviewStatus) {
+          parameters.set("review_status", filters.reviewStatus);
+        }
+        if (filters.applicationStatus) {
+          parameters.set("application_status", filters.applicationStatus);
+        }
+
+        const response = await fetch(`/api/jobs?${parameters}`, {
           signal: controller.signal,
         });
 
@@ -46,14 +67,28 @@ export default function App() {
 
     loadJobs();
 
-    // Cancel the old request when the offset changes or the page is removed.
+    // Cancel the previous request before starting another or leaving the page.
     return () => controller.abort();
-  }, [offset, refresh]);
+  }, [offset, refresh, filters]);
 
   function jobCreated() {
+    setFilters(emptyFilters);
     setOffset(0);
     // Refresh even when we are already on the first page.
     setRefresh((current) => current + 1);
+  }
+
+  function applyFilters(values: JobFilterValues) {
+    setOffset(0);
+    setFilters(values);
+  }
+
+  let emptyMessage = "No jobs recorded yet.";
+  if (filters.q || filters.reviewStatus || filters.applicationStatus) {
+    emptyMessage = "No jobs match these filters.";
+  }
+  if (page && page.offset > 0) {
+    emptyMessage = "No jobs on this page. Use Previous to go back.";
   }
 
   if (selectedJobId !== null) {
@@ -76,24 +111,19 @@ export default function App() {
       <p>Keep track of vacancies, your decisions, and your applications.</p>
       <AddJobForm onCreated={jobCreated} />
       <section aria-label="Job list">
+        <h2>Recorded jobs</h2>
+        <JobFilters key={refresh} filters={filters} onApply={applyFilters} />
         {loading && <p role="status">Loading your jobs…</p>}
         {error && <p role="alert">{error}</p>}
         {page && !loading && !error && (
           <>
-            <h2>Recorded jobs</h2>
             {page.items.length > 0 && (
               <p>
                 Showing {page.offset + 1}–{page.offset + page.items.length} of{" "}
                 {page.total} jobs.
               </p>
             )}
-            {page.items.length === 0 && (
-              <p>
-                {page.offset === 0
-                  ? "No jobs recorded yet."
-                  : "No jobs on this page. Use Previous to go back."}
-              </p>
-            )}
+            {page.items.length === 0 && <p>{emptyMessage}</p>}
             <ul className="job-list">
               {page.items.map((job) => (
                 <li key={job.id}>

@@ -168,3 +168,15 @@ textarea {
   display: inline-block;
   margin-top: 20px;
 }
+
+.job-filters {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+#search-help {
+  margin: 0 0 8px;
+  color: #52665c;
+  font-size: 0.9rem;
+}

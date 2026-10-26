@@ -22,6 +22,18 @@ export type JobPage = {
   offset: number;
 };
 
+export type JobFilterValues = {
+  q: string;
+  reviewStatus: Job["review_status"] | "";
+  applicationStatus: Job["application_status"] | "";
+};
+
+export const emptyFilters: JobFilterValues = {
+  q: "",
+  reviewStatus: "",
+  applicationStatus: "",
+};
+
 export const reviewStatuses: Job["review_status"][] = [
   "to_review",
   "interested",
