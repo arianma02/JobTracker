@@ -1,8 +1,8 @@
 import psycopg
 import pytest
 
-import main
 from database import get_connection
+from routes import jobs
 
 
 def test_retrieve_a_created_job(client):
@@ -106,7 +106,7 @@ def test_reading_jobs_when_database_is_unavailable(client, monkeypatch, path):
     def unavailable_connection():
         raise psycopg.OperationalError("Synthetic connection failure")
 
-    monkeypatch.setattr(main, "get_connection", unavailable_connection)
+    monkeypatch.setattr(jobs, "get_connection", unavailable_connection)
 
     response = client.get(path)
 

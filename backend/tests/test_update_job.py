@@ -1,8 +1,8 @@
 import psycopg
 import pytest
 
-import main
 from database import get_connection
+from routes import jobs
 
 
 def create_job(client):
@@ -137,7 +137,7 @@ def test_update_when_database_is_unavailable(client, monkeypatch):
     def unavailable_connection():
         raise psycopg.OperationalError("Synthetic connection failure")
 
-    monkeypatch.setattr(main, "get_connection", unavailable_connection)
+    monkeypatch.setattr(jobs, "get_connection", unavailable_connection)
 
     response = client.patch(
         "/api/jobs/00000000-0000-0000-0000-000000000001", json={"notes": "New note"}
