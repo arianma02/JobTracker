@@ -35,60 +35,67 @@ export default function JobFilters(props: JobFiltersProps) {
       aria-label="Filter jobs"
       className="job-filters"
     >
-      <label htmlFor="job-search">Search recorded jobs</label>
-      <input
-        id="job-search"
-        type="search"
-        value={draft.q}
-        onChange={(event) => setDraft({ ...draft, q: event.target.value })}
-        maxLength={200}
-        aria-describedby="search-help"
-      />
+      <div className="filter-field filter-search">
+        <label htmlFor="job-search">Search recorded jobs</label>
+        <input
+          id="job-search"
+          type="search"
+          value={draft.q}
+          onChange={(event) => setDraft({ ...draft, q: event.target.value })}
+          maxLength={200}
+          aria-describedby="search-help"
+        />
+      </div>
+      <div className="filter-field">
+        <label htmlFor="review-filter">Review status filter</label>
+        <select
+          id="review-filter"
+          value={draft.reviewStatus}
+          onChange={(event) =>
+            setDraft({
+              ...draft,
+              reviewStatus: event.target
+                .value as JobFilterValues["reviewStatus"],
+            })
+          }
+        >
+          <option value="">All review statuses</option>
+          {reviewStatuses.map((status) => (
+            <option key={status} value={status}>
+              {statusLabels[status]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="filter-field">
+        <label htmlFor="application-filter">Application status filter</label>
+        <select
+          id="application-filter"
+          value={draft.applicationStatus}
+          onChange={(event) =>
+            setDraft({
+              ...draft,
+              applicationStatus: event.target
+                .value as JobFilterValues["applicationStatus"],
+            })
+          }
+        >
+          <option value="">
+            {props.applicationsOnly
+              ? "All applications"
+              : "All application statuses"}
+          </option>
+          {availableApplicationStatuses.map((status) => (
+            <option key={status} value={status}>
+              {statusLabels[status]}
+            </option>
+          ))}
+        </select>
+      </div>
       <p id="search-help">
         Search title, company, or notes. Apply filters to update the results.
       </p>
-      <label htmlFor="review-filter">Review status filter</label>
-      <select
-        id="review-filter"
-        value={draft.reviewStatus}
-        onChange={(event) =>
-          setDraft({
-            ...draft,
-            reviewStatus: event.target.value as JobFilterValues["reviewStatus"],
-          })
-        }
-      >
-        <option value="">All review statuses</option>
-        {reviewStatuses.map((status) => (
-          <option key={status} value={status}>
-            {statusLabels[status]}
-          </option>
-        ))}
-      </select>
-      <label htmlFor="application-filter">Application status filter</label>
-      <select
-        id="application-filter"
-        value={draft.applicationStatus}
-        onChange={(event) =>
-          setDraft({
-            ...draft,
-            applicationStatus: event.target
-              .value as JobFilterValues["applicationStatus"],
-          })
-        }
-      >
-        <option value="">
-          {props.applicationsOnly
-            ? "All applications"
-            : "All application statuses"}
-        </option>
-        {availableApplicationStatuses.map((status) => (
-          <option key={status} value={status}>
-            {statusLabels[status]}
-          </option>
-        ))}
-      </select>
-      <div className="form-actions">
+      <div className="form-actions filter-actions">
         <button type="submit">Apply filters</button>
         <button type="button" onClick={clearFilters}>
           Clear filters

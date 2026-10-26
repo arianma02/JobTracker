@@ -158,6 +158,7 @@ test("adding a job refreshes the first page and exposes optional fields in detai
     .mockResolvedValueOnce(Response.json(createdJob));
   render(<App />);
   await screen.findByText("No jobs recorded yet.");
+  fireEvent.click(screen.getByRole("button", { name: "Add job" }));
   fireEvent.change(screen.getByLabelText("Job title"), {
     target: { value: "Developer 1" },
   });
@@ -345,6 +346,7 @@ test("creating a job clears filters so the new job is visible", async () => {
   });
   fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
   await screen.findByText("No jobs match these filters.");
+  fireEvent.click(screen.getByRole("button", { name: "Add job" }));
   fireEvent.change(screen.getByLabelText("Job title"), {
     target: { value: "Developer 1" },
   });
@@ -395,7 +397,7 @@ test("Applications requests the application subset and My Jobs restores all jobs
 
   await screen.findByText("Showing 1–1 of 1 jobs.");
   expect(fetchMock.mock.calls[2][0]).toBe("/api/jobs?limit=20&offset=0");
-  expect(screen.getByLabelText("Job title")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add job" })).toBeTruthy();
 });
 
 test("applying and clearing filters keeps the Applications scope", async () => {
@@ -470,4 +472,29 @@ test("switching views resets pagination and saving Not applied removes only the 
   expect(
     within(screen.getByRole("list")).getByText("Not applied"),
   ).toBeTruthy();
+});
+
+test("the add form starts closed and retains a draft when closed and reopened", async () => {
+  fetchMock.mockResolvedValue(jobPage(0, 0));
+  render(<App />);
+  await screen.findByText("No jobs recorded yet.");
+  expect(screen.queryByRole("textbox", { name: "Job title" })).toBeNull();
+  expect(
+    screen
+      .getByRole("button", { name: "Add job" })
+      .getAttribute("aria-expanded"),
+  ).toBe("false");
+
+  fireEvent.click(screen.getByRole("button", { name: "Add job" }));
+  fireEvent.change(screen.getByLabelText("Job title"), {
+    target: { value: "Draft developer role" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Close form" }));
+  expect(screen.queryByRole("textbox", { name: "Job title" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Add job" }));
+
+  expect((screen.getByLabelText("Job title") as HTMLInputElement).value).toBe(
+    "Draft developer role",
+  );
+  expect(fetchMock).toHaveBeenCalledOnce();
 });

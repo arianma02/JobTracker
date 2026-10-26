@@ -88,11 +88,25 @@ export default function JobDetails(props: JobDetailsProps) {
                 <dl>
                   <div>
                     <dt>Review</dt>
-                    <dd>{statusLabels[job.review_status]}</dd>
+                    <dd>
+                      <span
+                        className="status-badge"
+                        data-status={job.review_status}
+                      >
+                        {statusLabels[job.review_status]}
+                      </span>
+                    </dd>
                   </div>
                   <div>
                     <dt>Application</dt>
-                    <dd>{statusLabels[job.application_status]}</dd>
+                    <dd>
+                      <span
+                        className="status-badge"
+                        data-status={job.application_status}
+                      >
+                        {statusLabels[job.application_status]}
+                      </span>
+                    </dd>
                   </div>
                 </dl>
                 <h2>Notes</h2>

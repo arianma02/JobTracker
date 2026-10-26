@@ -13,6 +13,7 @@ type JobView = "jobs" | "applications";
 
 export default function App() {
   const [view, setView] = useState<JobView>("jobs");
+  const [showAddJob, setShowAddJob] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [refresh, setRefresh] = useState(0);
@@ -92,6 +93,7 @@ export default function App() {
   function switchView(nextView: JobView) {
     if (nextView === view) return;
     setView(nextView);
+    setShowAddJob(false);
     setFilters(emptyFilters);
     setOffset(0);
   }
@@ -125,31 +127,52 @@ export default function App() {
 
   return (
     <main>
-      <p className="brand">JobTrack</p>
-      <nav className="view-navigation" aria-label="Main views">
-        <button
-          type="button"
-          aria-current={view === "jobs" ? "page" : undefined}
-          onClick={() => switchView("jobs")}
-        >
-          My Jobs
-        </button>
-        <button
-          type="button"
-          aria-current={view === "applications" ? "page" : undefined}
-          onClick={() => switchView("applications")}
-        >
-          Applications
-        </button>
-      </nav>
-      <h1>{view === "applications" ? "Applications" : "My Jobs"}</h1>
-      <p>
-        {view === "applications"
-          ? "Track jobs you have applied to and their progress."
-          : "Keep track of vacancies, your decisions, and your applications."}
-      </p>
-      {view === "jobs" && <AddJobForm onCreated={jobCreated} />}
-      <section aria-label="Job list">
+      <header className="workspace-header">
+        <p className="brand">JobTrack</p>
+        <nav className="view-navigation" aria-label="Main views">
+          <button
+            type="button"
+            aria-current={view === "jobs" ? "page" : undefined}
+            onClick={() => switchView("jobs")}
+          >
+            My Jobs
+          </button>
+          <button
+            type="button"
+            aria-current={view === "applications" ? "page" : undefined}
+            onClick={() => switchView("applications")}
+          >
+            Applications
+          </button>
+        </nav>
+      </header>
+      <div className="page-heading">
+        <div>
+          <h1>{view === "applications" ? "Applications" : "My Jobs"}</h1>
+          <p>
+            {view === "applications"
+              ? "Track jobs you have applied to and their progress."
+              : "Keep track of vacancies, your decisions, and your applications."}
+          </p>
+        </div>
+        {view === "jobs" && (
+          <button
+            type="button"
+            className="primary-button"
+            aria-expanded={showAddJob}
+            aria-controls="add-job-panel"
+            onClick={() => setShowAddJob((current) => !current)}
+          >
+            {showAddJob ? "Close form" : "Add job"}
+          </button>
+        )}
+      </div>
+      {view === "jobs" && (
+        <div id="add-job-panel" hidden={!showAddJob}>
+          <AddJobForm onCreated={jobCreated} />
+        </div>
+      )}
+      <section aria-label="Job list" className="jobs-panel">
         <h2>
           {view === "applications" ? "Recorded applications" : "Recorded jobs"}
         </h2>
@@ -164,7 +187,7 @@ export default function App() {
         {page && !loading && !error && (
           <>
             {page.items.length > 0 && (
-              <p>
+              <p className="result-summary">
                 Showing {page.offset + 1}–{page.offset + page.items.length} of{" "}
                 {page.total} {view === "applications" ? "applications" : "jobs"}
                 .
@@ -183,15 +206,34 @@ export default function App() {
                       {job.title}
                     </button>
                   </h3>
-                  <p>{job.company}</p>
+                  <p>
+                    {job.company}
+                    {job.location && (
+                      <span className="job-location"> · {job.location}</span>
+                    )}
+                  </p>
                   <dl>
                     <div>
                       <dt>Review</dt>
-                      <dd>{statusLabels[job.review_status]}</dd>
+                      <dd>
+                        <span
+                          className="status-badge"
+                          data-status={job.review_status}
+                        >
+                          {statusLabels[job.review_status]}
+                        </span>
+                      </dd>
                     </div>
                     <div>
                       <dt>Application</dt>
-                      <dd>{statusLabels[job.application_status]}</dd>
+                      <dd>
+                        <span
+                          className="status-badge"
+                          data-status={job.application_status}
+                        >
+                          {statusLabels[job.application_status]}
+                        </span>
+                      </dd>
                     </div>
                   </dl>
                 </li>
