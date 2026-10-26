@@ -22,6 +22,21 @@ export type JobPage = {
   offset: number;
 };
 
+export const reviewStatuses: Job["review_status"][] = [
+  "to_review",
+  "interested",
+  "not_interested",
+];
+
+export const applicationStatuses: Job["application_status"][] = [
+  "not_applied",
+  "applied",
+  "interviewing",
+  "offer",
+  "rejected",
+  "withdrawn",
+];
+
 export const statusLabels = {
   to_review: "To review",
   interested: "Interested",

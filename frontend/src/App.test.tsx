@@ -179,3 +179,44 @@ test("opens a job from page two and returns to the same list page", async () => 
   expect(screen.getByRole("button", { name: "Developer 21" })).toBeTruthy();
   expect(fetchMock).toHaveBeenCalledTimes(3);
 });
+
+test("saving a job refreshes statuses on the current list page", async () => {
+  const updatedJob = {
+    ...jobs[20],
+    notes: "Updated notes",
+    application_status: "rejected",
+  };
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 21))
+    .mockResolvedValueOnce(jobPage(20, 21))
+    .mockResolvedValueOnce(Response.json(jobs[20]))
+    .mockResolvedValueOnce(Response.json(updatedJob))
+    .mockResolvedValueOnce(
+      Response.json({ items: [updatedJob], total: 21, limit: 20, offset: 20 }),
+    );
+  render(<App />);
+  await screen.findByText("Showing 1–20 of 21 jobs.");
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText("Showing 21–21 of 21 jobs.");
+  fireEvent.click(screen.getByRole("button", { name: "Developer 21" }));
+  await screen.findByText("No notes yet.");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Edit notes and statuses" }),
+  );
+  fireEvent.change(screen.getByLabelText("Application status"), {
+    target: { value: "rejected" },
+  });
+  fireEvent.change(screen.getByLabelText("Notes"), {
+    target: { value: "Updated notes" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+  await screen.findByText("Changes saved.");
+  expect(screen.getByText("Updated notes")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Back to jobs" }));
+  await screen.findByText("Rejected");
+  expect(screen.getByText("Showing 21–21 of 21 jobs.")).toBeTruthy();
+  expect(fetchMock.mock.calls[3][1]?.method).toBe("PATCH");
+  expect(fetchMock.mock.calls[4][0]).toBe("/api/jobs?limit=20&offset=20");
+});

@@ -1,21 +1,27 @@
 import { useEffect, useState } from "react";
 import { statusLabels, type Job } from "./jobs";
+import JobEditor from "./JobEditor";
 
 type JobDetailsProps = {
   jobId: string;
   onBack: () => void;
+  onUpdated?: () => void;
 };
 
 export default function JobDetails(props: JobDetailsProps) {
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
     setJob(null);
     setLoading(true);
     setError("");
+    setEditing(false);
+    setSuccess("");
 
     async function loadJob() {
       try {
@@ -51,9 +57,16 @@ export default function JobDetails(props: JobDetailsProps) {
     return () => controller.abort();
   }, [props.jobId]);
 
+  function jobSaved(updatedJob: Job) {
+    setJob(updatedJob);
+    setEditing(false);
+    setSuccess("Changes saved.");
+    props.onUpdated?.();
+  }
+
   return (
     <>
-      <button type="button" onClick={props.onBack} autoFocus>
+      <button type="button" onClick={props.onBack} disabled={editing} autoFocus>
         Back to jobs
       </button>
       <section aria-label="Job details">
@@ -64,23 +77,44 @@ export default function JobDetails(props: JobDetailsProps) {
             <h1>{job.title}</h1>
             <p>{job.company}</p>
             <p>{job.location || "Location not provided"}</p>
-            <dl>
-              <div>
-                <dt>Review</dt>
-                <dd>{statusLabels[job.review_status]}</dd>
-              </div>
-              <div>
-                <dt>Application</dt>
-                <dd>{statusLabels[job.application_status]}</dd>
-              </div>
-            </dl>
-            <h2>Notes</h2>
-            <p className="job-notes">{job.notes || "No notes yet."}</p>
+            {editing ? (
+              <JobEditor
+                job={job}
+                onSaved={jobSaved}
+                onCancel={() => setEditing(false)}
+              />
+            ) : (
+              <>
+                <dl>
+                  <div>
+                    <dt>Review</dt>
+                    <dd>{statusLabels[job.review_status]}</dd>
+                  </div>
+                  <div>
+                    <dt>Application</dt>
+                    <dd>{statusLabels[job.application_status]}</dd>
+                  </div>
+                </dl>
+                <h2>Notes</h2>
+                <p className="job-notes">{job.notes || "No notes yet."}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuccess("");
+                    setEditing(true);
+                  }}
+                >
+                  Edit notes and statuses
+                </button>
+              </>
+            )}
+            {success && <p role="status">{success}</p>}
             {job.preferred_url && /^https?:\/\//i.test(job.preferred_url) ? (
               <a
                 href={job.preferred_url}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="posting-link"
               >
                 Open original posting (new tab)
               </a>

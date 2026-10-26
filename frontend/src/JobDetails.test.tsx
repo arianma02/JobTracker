@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import JobDetails from "./JobDetails";
 import type { Job } from "./jobs";
@@ -91,4 +91,31 @@ test("shows an error when the server cannot return details", async () => {
     "Go back and try again",
   );
   expect(screen.queryByRole("status")).toBeNull();
+});
+
+test("cancelling edits restores the saved notes and allows going back", async () => {
+  fetchMock.mockResolvedValue(Response.json(job));
+  render(<JobDetails jobId={job.id} onBack={() => {}} />);
+  await screen.findByRole("heading", { name: "Python developer" });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Edit notes and statuses" }),
+  );
+  expect(
+    screen
+      .getByRole("button", { name: "Back to jobs" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
+  fireEvent.change(screen.getByLabelText("Notes"), {
+    target: { value: "Unsaved changes" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancel edits" }));
+
+  expect(screen.getByText(/First line/).textContent).toBe(job.notes);
+  expect(
+    screen
+      .getByRole("button", { name: "Back to jobs" })
+      .hasAttribute("disabled"),
+  ).toBe(false);
+  expect(fetchMock).toHaveBeenCalledOnce();
 });

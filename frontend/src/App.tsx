@@ -63,6 +63,7 @@ export default function App() {
         <JobDetails
           jobId={selectedJobId}
           onBack={() => setSelectedJobId(null)}
+          onUpdated={() => setRefresh((current) => current + 1)}
         />
       </main>
     );
