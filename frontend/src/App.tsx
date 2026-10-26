@@ -9,7 +9,10 @@ import {
   type JobPage,
 } from "./jobs";
 
+type JobView = "jobs" | "applications";
+
 export default function App() {
+  const [view, setView] = useState<JobView>("jobs");
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [refresh, setRefresh] = useState(0);
@@ -37,6 +40,9 @@ export default function App() {
         }
         if (filters.applicationStatus) {
           parameters.set("application_status", filters.applicationStatus);
+        }
+        if (view === "applications") {
+          parameters.set("applications_only", "true");
         }
 
         const response = await fetch(`/api/jobs?${parameters}`, {
@@ -69,7 +75,7 @@ export default function App() {
 
     // Cancel the previous request before starting another or leaving the page.
     return () => controller.abort();
-  }, [offset, refresh, filters]);
+  }, [offset, refresh, filters, view]);
 
   function jobCreated() {
     setFilters(emptyFilters);
@@ -83,9 +89,22 @@ export default function App() {
     setFilters(values);
   }
 
-  let emptyMessage = "No jobs recorded yet.";
+  function switchView(nextView: JobView) {
+    if (nextView === view) return;
+    setView(nextView);
+    setFilters(emptyFilters);
+    setOffset(0);
+  }
+
+  let emptyMessage =
+    view === "applications"
+      ? "No applications recorded yet."
+      : "No jobs recorded yet.";
   if (filters.q || filters.reviewStatus || filters.applicationStatus) {
-    emptyMessage = "No jobs match these filters.";
+    emptyMessage =
+      view === "applications"
+        ? "No applications match these filters."
+        : "No jobs match these filters.";
   }
   if (page && page.offset > 0) {
     emptyMessage = "No jobs on this page. Use Previous to go back.";
@@ -107,12 +126,39 @@ export default function App() {
   return (
     <main>
       <p className="brand">JobTrack</p>
-      <h1>My Jobs</h1>
-      <p>Keep track of vacancies, your decisions, and your applications.</p>
-      <AddJobForm onCreated={jobCreated} />
+      <nav className="view-navigation" aria-label="Main views">
+        <button
+          type="button"
+          aria-current={view === "jobs" ? "page" : undefined}
+          onClick={() => switchView("jobs")}
+        >
+          My Jobs
+        </button>
+        <button
+          type="button"
+          aria-current={view === "applications" ? "page" : undefined}
+          onClick={() => switchView("applications")}
+        >
+          Applications
+        </button>
+      </nav>
+      <h1>{view === "applications" ? "Applications" : "My Jobs"}</h1>
+      <p>
+        {view === "applications"
+          ? "Track jobs you have applied to and their progress."
+          : "Keep track of vacancies, your decisions, and your applications."}
+      </p>
+      {view === "jobs" && <AddJobForm onCreated={jobCreated} />}
       <section aria-label="Job list">
-        <h2>Recorded jobs</h2>
-        <JobFilters key={refresh} filters={filters} onApply={applyFilters} />
+        <h2>
+          {view === "applications" ? "Recorded applications" : "Recorded jobs"}
+        </h2>
+        <JobFilters
+          key={`${view}-${refresh}`}
+          filters={filters}
+          onApply={applyFilters}
+          applicationsOnly={view === "applications"}
+        />
         {loading && <p role="status">Loading your jobs…</p>}
         {error && <p role="alert">{error}</p>}
         {page && !loading && !error && (
@@ -120,7 +166,8 @@ export default function App() {
             {page.items.length > 0 && (
               <p>
                 Showing {page.offset + 1}–{page.offset + page.items.length} of{" "}
-                {page.total} jobs.
+                {page.total} {view === "applications" ? "applications" : "jobs"}
+                .
               </p>
             )}
             {page.items.length === 0 && <p>{emptyMessage}</p>}

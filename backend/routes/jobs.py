@@ -76,6 +76,7 @@ def list_jobs(
     q: str | None = Query(default=None, max_length=200),
     review_status: ReviewStatus | None = None,
     application_status: ApplicationStatus | None = None,
+    applications_only: bool = False,
 ):
     conditions = []
     parameters = []
@@ -100,6 +101,10 @@ def list_jobs(
     if application_status is not None:
         conditions.append("application_status = %s")
         parameters.append(application_status)
+
+    if applications_only:
+        conditions.append("application_status <> %s")
+        parameters.append("not_applied")
 
     where_clause = ""
     if conditions:

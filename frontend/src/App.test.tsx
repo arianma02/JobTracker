@@ -343,3 +343,114 @@ test("creating a job clears filters so the new job is visible", async () => {
     (screen.getByLabelText("Search recorded jobs") as HTMLInputElement).value,
   ).toBe("");
 });
+
+test("Applications requests the application subset and My Jobs restores all jobs", async () => {
+  const appliedJob = { ...jobs[0], application_status: "applied" };
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 1))
+    .mockResolvedValueOnce(
+      Response.json({ items: [appliedJob], total: 1, limit: 20, offset: 0 }),
+    )
+    .mockResolvedValueOnce(jobPage(0, 1));
+  render(<App />);
+  await screen.findByText("Showing 1–1 of 1 jobs.");
+
+  fireEvent.click(screen.getByRole("button", { name: "Applications" }));
+
+  await screen.findByText("Showing 1–1 of 1 applications.");
+  expect(fetchMock.mock.calls[1][0]).toBe(
+    "/api/jobs?limit=20&offset=0&applications_only=true",
+  );
+  expect(screen.queryByLabelText("Job title")).toBeNull();
+  expect(
+    within(screen.getByLabelText("Application status filter")).queryByRole(
+      "option",
+      { name: "Not applied" },
+    ),
+  ).toBeNull();
+  expect(
+    screen
+      .getByRole("button", { name: "Applications" })
+      .getAttribute("aria-current"),
+  ).toBe("page");
+
+  fireEvent.click(screen.getByRole("button", { name: "My Jobs" }));
+
+  await screen.findByText("Showing 1–1 of 1 jobs.");
+  expect(fetchMock.mock.calls[2][0]).toBe("/api/jobs?limit=20&offset=0");
+  expect(screen.getByLabelText("Job title")).toBeTruthy();
+});
+
+test("applying and clearing filters keeps the Applications scope", async () => {
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 0))
+    .mockResolvedValueOnce(jobPage(0, 0))
+    .mockResolvedValueOnce(jobPage(0, 0))
+    .mockResolvedValueOnce(jobPage(0, 0));
+  render(<App />);
+  await screen.findByText("No jobs recorded yet.");
+  fireEvent.click(screen.getByRole("button", { name: "Applications" }));
+  await screen.findByText("No applications recorded yet.");
+  fireEvent.change(screen.getByLabelText("Application status filter"), {
+    target: { value: "rejected" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+
+  await screen.findByText("No applications match these filters.");
+  expect(fetchMock.mock.calls[2][0]).toBe(
+    "/api/jobs?limit=20&offset=0&application_status=rejected&applications_only=true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+  await screen.findByText("No applications recorded yet.");
+  expect(fetchMock.mock.calls[3][0]).toBe(
+    "/api/jobs?limit=20&offset=0&applications_only=true",
+  );
+});
+
+test("switching views resets pagination and saving Not applied removes only the application", async () => {
+  const appliedJob = { ...jobs[0], application_status: "applied" };
+  const updatedJob = { ...appliedJob, application_status: "not_applied" };
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 21))
+    .mockResolvedValueOnce(jobPage(20, 21))
+    .mockResolvedValueOnce(
+      Response.json({ items: [appliedJob], total: 1, limit: 20, offset: 0 }),
+    )
+    .mockResolvedValueOnce(Response.json(appliedJob))
+    .mockResolvedValueOnce(Response.json(updatedJob))
+    .mockResolvedValueOnce(jobPage(0, 0))
+    .mockResolvedValueOnce(
+      Response.json({ items: [updatedJob], total: 1, limit: 20, offset: 0 }),
+    );
+  render(<App />);
+  await screen.findByText("Showing 1–20 of 21 jobs.");
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText("Showing 21–21 of 21 jobs.");
+  fireEvent.click(screen.getByRole("button", { name: "Applications" }));
+  await screen.findByText("Showing 1–1 of 1 applications.");
+  expect(fetchMock.mock.calls[2][0]).toBe(
+    "/api/jobs?limit=20&offset=0&applications_only=true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Developer 1" }));
+  await screen.findByText("No notes yet.");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Edit notes and statuses" }),
+  );
+  fireEvent.change(screen.getByLabelText("Application status"), {
+    target: { value: "not_applied" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  await screen.findByText("Changes saved.");
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to jobs" }));
+
+  await screen.findByText("No applications recorded yet.");
+  expect(fetchMock.mock.calls[5][0]).toBe(
+    "/api/jobs?limit=20&offset=0&applications_only=true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "My Jobs" }));
+  await screen.findByRole("button", { name: "Developer 1" });
+  expect(
+    within(screen.getByRole("list")).getByText("Not applied"),
+  ).toBeTruthy();
+});

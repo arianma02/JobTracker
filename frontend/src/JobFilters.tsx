@@ -10,10 +10,14 @@ import {
 type JobFiltersProps = {
   filters: JobFilterValues;
   onApply: (filters: JobFilterValues) => void;
+  applicationsOnly: boolean;
 };
 
 export default function JobFilters(props: JobFiltersProps) {
   const [draft, setDraft] = useState(props.filters);
+  const availableApplicationStatuses = props.applicationsOnly
+    ? applicationStatuses.filter((status) => status !== "not_applied")
+    : applicationStatuses;
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,8 +77,12 @@ export default function JobFilters(props: JobFiltersProps) {
           })
         }
       >
-        <option value="">All application statuses</option>
-        {applicationStatuses.map((status) => (
+        <option value="">
+          {props.applicationsOnly
+            ? "All applications"
+            : "All application statuses"}
+        </option>
+        {availableApplicationStatuses.map((status) => (
           <option key={status} value={status}>
             {statusLabels[status]}
           </option>

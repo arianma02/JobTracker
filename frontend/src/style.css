@@ -180,3 +180,15 @@ textarea {
   color: #52665c;
   font-size: 0.9rem;
 }
+
+.view-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.view-navigation button[aria-current="page"] {
+  background: #216348;
+  color: white;
+}
