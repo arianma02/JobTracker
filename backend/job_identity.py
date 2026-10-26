@@ -1,7 +1,12 @@
 from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
 TRACKING_PARAMETERS = {
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id"
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "utm_id",
 }
 
 
@@ -29,7 +34,9 @@ def normalize_url(value):
         host = f"[{host}]"
     port = parts.port
     if port is not None:
-        default_port = (scheme == "http" and port == 80) or (scheme == "https" and port == 443)
+        default_port = (scheme == "http" and port == 80) or (
+            scheme == "https" and port == 443
+        )
         if not default_port:
             host = f"{host}:{port}"
 

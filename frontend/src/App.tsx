@@ -61,7 +61,9 @@ export default function App() {
         }
       } catch {
         if (!controller.signal.aborted) {
-          setError("Could not load your jobs. Check that the backend is running, then refresh.");
+          setError(
+            "Could not load your jobs. Check that the backend is running, then refresh.",
+          );
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -88,10 +90,17 @@ export default function App() {
           <>
             <h2>Recorded jobs</h2>
             {page.items.length > 0 && (
-              <p>Showing {page.offset + 1}–{page.offset + page.items.length} of {page.total} jobs.</p>
+              <p>
+                Showing {page.offset + 1}–{page.offset + page.items.length} of{" "}
+                {page.total} jobs.
+              </p>
             )}
             {page.items.length === 0 && (
-              <p>{page.offset === 0 ? "No jobs recorded yet." : "No jobs on this page. Use Previous to go back."}</p>
+              <p>
+                {page.offset === 0
+                  ? "No jobs recorded yet."
+                  : "No jobs on this page. Use Previous to go back."}
+              </p>
             )}
             <ul className="job-list">
               {page.items.map((job) => (
@@ -124,7 +133,11 @@ export default function App() {
             </button>
             <button
               type="button"
-              disabled={loading || page.offset + page.limit >= page.total || page.offset + page.limit > 100000}
+              disabled={
+                loading ||
+                page.offset + page.limit >= page.total ||
+                page.offset + page.limit > 100000
+              }
               onClick={() => setOffset(page.offset + page.limit)}
             >
               Next

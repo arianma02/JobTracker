@@ -4,9 +4,9 @@ from job_identity import normalize_url
 
 
 def test_normalization_removes_known_noise():
-    assert normalize_url("HTTPS://Example.COM:443/Job?id=42&utm_source=email#details") == (
-        "https://example.com/Job?id=42"
-    )
+    assert normalize_url(
+        "HTTPS://Example.COM:443/Job?id=42&utm_source=email#details"
+    ) == ("https://example.com/Job?id=42")
 
 
 def test_unknown_and_repeated_query_parameters_are_preserved():

@@ -47,8 +47,16 @@ def test_job_list_order_and_pagination(client):
     # Fixed IDs and dates test the tie-breaker without depending on execution speed.
     jobs = [
         ("00000000-0000-0000-0000-000000000001", "Older", "2026-01-01T00:00:00Z"),
-        ("00000000-0000-0000-0000-000000000002", "Newer lower ID", "2026-02-01T00:00:00Z"),
-        ("00000000-0000-0000-0000-000000000003", "Newer higher ID", "2026-02-01T00:00:00Z"),
+        (
+            "00000000-0000-0000-0000-000000000002",
+            "Newer lower ID",
+            "2026-02-01T00:00:00Z",
+        ),
+        (
+            "00000000-0000-0000-0000-000000000003",
+            "Newer higher ID",
+            "2026-02-01T00:00:00Z",
+        ),
     ]
     with get_connection() as connection:
         for job_id, title, first_seen_at in jobs:
@@ -90,7 +98,13 @@ def test_offset_beyond_last_job_returns_empty_page(client):
 
 @pytest.mark.parametrize(
     "parameters",
-    [{"limit": 0}, {"limit": 101}, {"limit": "abc"}, {"offset": -1}, {"offset": 100001}],
+    [
+        {"limit": 0},
+        {"limit": 101},
+        {"limit": "abc"},
+        {"offset": -1},
+        {"offset": 100001},
+    ],
 )
 def test_invalid_pagination_is_rejected(client, parameters):
     response = client.get("/api/jobs", params=parameters)
