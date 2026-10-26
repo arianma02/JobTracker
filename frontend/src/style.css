@@ -57,3 +57,34 @@ dt {
 dd {
   margin: 0;
 }
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+button {
+  padding: 8px 16px;
+  border: 1px solid #216348;
+  border-radius: 6px;
+  background: white;
+  color: #216348;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #eaf2ed;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button:focus-visible {
+  outline: 2px solid #216348;
+  outline-offset: 3px;
+}

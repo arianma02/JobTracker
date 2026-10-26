@@ -17,6 +17,8 @@ type Job = {
 type JobPage = {
   items: Job[];
   total: number;
+  limit: number;
+  offset: number;
 };
 
 const statusLabels = {
@@ -32,16 +34,19 @@ const statusLabels = {
 };
 
 export default function App() {
+  const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<JobPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
+    setLoading(true);
+    setError("");
 
     async function loadJobs() {
       try {
-        const response = await fetch("/api/jobs?limit=20&offset=0", {
+        const response = await fetch(`/api/jobs?limit=20&offset=${offset}`, {
           signal: controller.signal,
         });
 
@@ -51,7 +56,9 @@ export default function App() {
         }
 
         const data: JobPage = await response.json();
-        setPage(data);
+        if (!controller.signal.aborted) {
+          setPage(data);
+        }
       } catch {
         if (!controller.signal.aborted) {
           setError("Could not load your jobs. Check that the backend is running, then refresh.");
@@ -65,9 +72,9 @@ export default function App() {
 
     loadJobs();
 
-    // Cancel the request if this page is removed before it finishes.
+    // Cancel the old request when the offset changes or the page is removed.
     return () => controller.abort();
-  }, []);
+  }, [offset]);
 
   return (
     <main>
@@ -77,11 +84,15 @@ export default function App() {
       <section aria-label="Job list">
         {loading && <p role="status">Loading your jobs…</p>}
         {error && <p role="alert">{error}</p>}
-        {page && (
+        {page && !loading && !error && (
           <>
             <h2>Recorded jobs</h2>
-            <p>Showing {page.items.length} of {page.total} jobs. First 20 only.</p>
-            {page.items.length === 0 && <p>No jobs recorded yet.</p>}
+            {page.items.length > 0 && (
+              <p>Showing {page.offset + 1}–{page.offset + page.items.length} of {page.total} jobs.</p>
+            )}
+            {page.items.length === 0 && (
+              <p>{page.offset === 0 ? "No jobs recorded yet." : "No jobs on this page. Use Previous to go back."}</p>
+            )}
             <ul className="job-list">
               {page.items.map((job) => (
                 <li key={job.id}>
@@ -101,6 +112,24 @@ export default function App() {
               ))}
             </ul>
           </>
+        )}
+        {page && (
+          <nav className="pagination" aria-label="Job pages">
+            <button
+              type="button"
+              disabled={loading || page.offset === 0}
+              onClick={() => setOffset(Math.max(0, page.offset - page.limit))}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={loading || page.offset + page.limit >= page.total || page.offset + page.limit > 100000}
+              onClick={() => setOffset(page.offset + page.limit)}
+            >
+              Next
+            </button>
+          </nav>
         )}
       </section>
     </main>
