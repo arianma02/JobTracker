@@ -1,0 +1,37 @@
+name: jobtrack
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: jobtrack_dev
+      POSTGRES_PASSWORD: local_dev_only
+      POSTGRES_DB: jobtrack_dev
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobtrack_dev -d jobtrack_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  test-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: jobtrack_test
+      POSTGRES_PASSWORD: local_test_only
+      POSTGRES_DB: jobtrack_test
+    ports:
+      - "127.0.0.1:55433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobtrack_test -d jobtrack_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  dev_data:

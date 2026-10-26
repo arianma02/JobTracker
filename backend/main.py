@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 
+from routes import health, jobs
+
 app = FastAPI(title="JobTrack", version="0.1.0")
 
-
-@app.get("/api/health")
-def health():
-    # This checks that the API responds, independently of database availability.
-    return {"status": "ok"}
+app.include_router(health.router)
+app.include_router(jobs.router)
