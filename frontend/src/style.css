@@ -1,0 +1,26 @@
+body {
+  margin: 0;
+  background: #f5f7f6;
+  color: #20332c;
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+main {
+  max-width: 800px;
+  margin: 48px auto;
+  padding: 0 24px;
+}
+
+.brand {
+  color: #216348;
+  font-weight: 700;
+}
+
+section {
+  margin-top: 32px;
+  padding: 24px;
+  background: white;
+  border: 1px solid #d9e2dd;
+  border-radius: 8px;
+}
