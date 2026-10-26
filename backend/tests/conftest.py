@@ -28,11 +28,11 @@ def database_connection(test_database):
 @pytest.fixture
 def client(test_database):
     with get_connection() as connection:
-        connection.execute("TRUNCATE jobs")
+        connection.execute("TRUNCATE job_identifiers, jobs")
 
     with TestClient(app) as test_client:
         yield test_client
 
     # API requests commit their own connections, so rollback cannot clean them up.
     with get_connection() as connection:
-        connection.execute("TRUNCATE jobs")
+        connection.execute("TRUNCATE job_identifiers, jobs")

@@ -4,6 +4,7 @@ import psycopg
 from fastapi import APIRouter, HTTPException, Query
 
 from database import get_connection
+from job_identity import find_job_by_url, normalize_url
 from schemas import ApplicationStatus, JobCreate, JobPatch, ReviewStatus
 
 router = APIRouter()
@@ -11,18 +12,47 @@ router = APIRouter()
 
 @router.post("/api/jobs", status_code=201)
 def create_job(job: JobCreate):
+    normalized_url = None
+    if job.preferred_url is not None:
+        normalized_url = normalize_url(job.preferred_url)
+
     try:
         with get_connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO jobs (title, company, location, notes)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO jobs (title, company, location, notes, preferred_url)
+                    VALUES (%s, %s, %s, %s, %s)
                     RETURNING *
                     """,
-                    (job.title, job.company, job.location, job.notes),
+                    (job.title, job.company, job.location, job.notes, job.preferred_url),
                 )
                 created_job = cursor.fetchone()
+
+                if normalized_url is not None:
+                    cursor.execute(
+                        """
+                        INSERT INTO job_identifiers (job_id, namespace, value)
+                        VALUES (%s, 'normalized-url', %s)
+                        ON CONFLICT (namespace, value) DO NOTHING
+                        RETURNING job_id
+                        """,
+                        (created_job["id"], normalized_url),
+                    )
+                    identifier = cursor.fetchone()
+                    if identifier is None:
+                        # Undo the new job too; the URL already belongs to another job.
+                        connection.rollback()
+                        existing_job = find_job_by_url(cursor, normalized_url)
+                        if existing_job is None:
+                            raise HTTPException(status_code=409, detail="Job changed while saving; retry")
+                        raise HTTPException(
+                            status_code=409,
+                            detail={
+                                "message": "Job already recorded",
+                                "job_id": str(existing_job["id"]),
+                            },
+                        )
         # The connection's context commits successfully before we report creation.
     except psycopg.OperationalError:
         raise HTTPException(status_code=503, detail="Database unavailable") from None

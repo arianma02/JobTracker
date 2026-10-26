@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from job_identity import normalize_url
+
 ReviewStatus = Literal["to_review", "interested", "not_interested"]
 ApplicationStatus = Literal[
     "not_applied", "applied", "interviewing", "offer", "rejected", "withdrawn"
@@ -15,6 +17,15 @@ class JobCreate(BaseModel):
     company: str = Field(min_length=1, max_length=200)
     location: str | None = Field(default=None, max_length=200)
     notes: str | None = Field(default=None, max_length=20000)
+    preferred_url: str | None = Field(default=None, min_length=1, max_length=2048)
+
+    @field_validator("preferred_url")
+    @classmethod
+    def validate_posting_url(cls, value):
+        if value is not None:
+            normalize_url(value)
+            return value.strip()
+        return value
 
     @field_validator("title", "company", "location", mode="before")
     @classmethod
