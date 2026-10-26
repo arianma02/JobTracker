@@ -7,6 +7,8 @@ type AddJobFormProps = {
 export default function AddJobForm(props: AddJobFormProps) {
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
+  const [location, setLocation] = useState("");
+  const [notes, setNotes] = useState("");
   const [url, setUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -31,6 +33,8 @@ export default function AddJobForm(props: AddJobFormProps) {
         body: JSON.stringify({
           title: title.trim(),
           company: company.trim(),
+          location: location.trim() || null,
+          notes: notes || null,
           preferred_url: url.trim() || null,
         }),
       });
@@ -50,7 +54,7 @@ export default function AddJobForm(props: AddJobFormProps) {
       }
       if (response.status === 422) {
         setError(
-          "Check the title and company. If you include a URL, use a valid http:// or https:// posting URL.",
+          "Check the title, company, and optional fields. Location allows 200 characters and notes 20,000. Posting URLs must use http:// or https://.",
         );
         return;
       }
@@ -60,6 +64,8 @@ export default function AddJobForm(props: AddJobFormProps) {
 
       setTitle("");
       setCompany("");
+      setLocation("");
+      setNotes("");
       setUrl("");
       setSuccess("Job added. Review: To review. Application: Not applied.");
       props.onCreated();
@@ -94,6 +100,13 @@ export default function AddJobForm(props: AddJobFormProps) {
             required
             maxLength={200}
           />
+          <label htmlFor="job-location">Location (optional)</label>
+          <input
+            id="job-location"
+            value={location}
+            onChange={(event) => setLocation(event.target.value)}
+            maxLength={200}
+          />
           <label htmlFor="job-url">Posting URL (optional)</label>
           <input
             id="job-url"
@@ -108,6 +121,14 @@ export default function AddJobForm(props: AddJobFormProps) {
             link without fetching the page. Without a URL, duplicates cannot be
             detected.
           </p>
+          <label htmlFor="initial-notes">Initial notes (optional)</label>
+          <textarea
+            id="initial-notes"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            maxLength={20000}
+            rows={4}
+          />
           <button type="submit">{saving ? "Saving…" : "Add job"}</button>
         </fieldset>
       </form>

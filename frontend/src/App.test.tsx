@@ -143,11 +143,19 @@ test("Next and Previous request the correct pages and respect the ends", async (
   ).toBe(false);
 });
 
-test("adding a job refreshes the first page even when already on it", async () => {
+test("adding a job refreshes the first page and exposes optional fields in details", async () => {
+  const createdJob = {
+    ...jobs[0],
+    location: "Stockholm",
+    notes: "Initial example notes",
+  };
   fetchMock
     .mockResolvedValueOnce(jobPage(0, 0))
-    .mockResolvedValueOnce(Response.json({ id: "1" }, { status: 201 }))
-    .mockResolvedValueOnce(jobPage(0, 1));
+    .mockResolvedValueOnce(Response.json(createdJob, { status: 201 }))
+    .mockResolvedValueOnce(
+      Response.json({ items: [createdJob], total: 1, limit: 20, offset: 0 }),
+    )
+    .mockResolvedValueOnce(Response.json(createdJob));
   render(<App />);
   await screen.findByText("No jobs recorded yet.");
   fireEvent.change(screen.getByLabelText("Job title"), {
@@ -156,12 +164,21 @@ test("adding a job refreshes the first page even when already on it", async () =
   fireEvent.change(screen.getByLabelText("Company"), {
     target: { value: "Example AB" },
   });
+  fireEvent.change(screen.getByLabelText("Location (optional)"), {
+    target: { value: "Stockholm" },
+  });
+  fireEvent.change(screen.getByLabelText("Initial notes (optional)"), {
+    target: { value: "Initial example notes" },
+  });
 
   fireEvent.click(screen.getByRole("button", { name: "Add job" }));
 
   await screen.findByRole("heading", { name: "Developer 1" });
   expect(fetchMock.mock.calls[1][1]?.method).toBe("POST");
   expect(fetchMock.mock.calls[2][0]).toBe("/api/jobs?limit=20&offset=0");
+  fireEvent.click(screen.getByRole("button", { name: "Developer 1" }));
+  await screen.findByText("Stockholm");
+  expect(screen.getByText("Initial example notes")).toBeTruthy();
 });
 
 test("opens a job from page two and returns to the same list page", async () => {

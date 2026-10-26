@@ -31,6 +31,12 @@ test("posts trimmed input and clears the form after a successful save", async ()
   );
   render(<AddJobForm onCreated={onCreated} />);
   fillForm(" Developer ");
+  fireEvent.change(screen.getByLabelText("Location (optional)"), {
+    target: { value: " Stockholm " },
+  });
+  fireEvent.change(screen.getByLabelText("Initial notes (optional)"), {
+    target: { value: "First line\n  Keep this indentation." },
+  });
   fireEvent.change(screen.getByLabelText("Posting URL (optional)"), {
     target: { value: "https://example.com/job/1" },
   });
@@ -45,24 +51,39 @@ test("posts trimmed input and clears the form after a successful save", async ()
   expect(JSON.parse(String(options?.body))).toEqual({
     title: "Developer",
     company: "Example AB",
+    location: "Stockholm",
+    notes: "First line\n  Keep this indentation.",
     preferred_url: "https://example.com/job/1",
   });
   expect((screen.getByLabelText("Job title") as HTMLInputElement).value).toBe(
     "",
   );
   expect(onCreated).toHaveBeenCalledOnce();
+  expect(
+    (screen.getByLabelText("Location (optional)") as HTMLInputElement).value,
+  ).toBe("");
+  expect(
+    (screen.getByLabelText("Initial notes (optional)") as HTMLTextAreaElement)
+      .value,
+  ).toBe("");
 });
 
-test("sends null when no posting URL is provided", async () => {
+test("sends null for empty optional fields", async () => {
   fetchMock.mockResolvedValue(Response.json({}, { status: 201 }));
   render(<AddJobForm onCreated={onCreated} />);
   fillForm();
+
+  fireEvent.change(screen.getByLabelText("Location (optional)"), {
+    target: { value: "   " },
+  });
 
   fireEvent.click(screen.getByRole("button", { name: "Add job" }));
 
   await screen.findByRole("status");
   const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
   expect(body.preferred_url).toBeNull();
+  expect(body.location).toBeNull();
+  expect(body.notes).toBeNull();
 });
 
 test("preserves input and reports a duplicate without reporting creation", async () => {
@@ -74,6 +95,12 @@ test("preserves input and reports a duplicate without reporting creation", async
   );
   render(<AddJobForm onCreated={onCreated} />);
   fillForm();
+  fireEvent.change(screen.getByLabelText("Location (optional)"), {
+    target: { value: "Stockholm" },
+  });
+  fireEvent.change(screen.getByLabelText("Initial notes (optional)"), {
+    target: { value: "Keep this draft" },
+  });
   fireEvent.change(screen.getByLabelText("Posting URL (optional)"), {
     target: { value: "https://example.com/job/1" },
   });
@@ -87,6 +114,13 @@ test("preserves input and reports a duplicate without reporting creation", async
     "Developer",
   );
   expect(onCreated).not.toHaveBeenCalled();
+  expect(
+    (screen.getByLabelText("Location (optional)") as HTMLInputElement).value,
+  ).toBe("Stockholm");
+  expect(
+    (screen.getByLabelText("Initial notes (optional)") as HTMLTextAreaElement)
+      .value,
+  ).toBe("Keep this draft");
 });
 
 test("shows a validation error from the backend", async () => {
@@ -97,7 +131,7 @@ test("shows a validation error from the backend", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Add job" }));
 
   expect((await screen.findByRole("alert")).textContent).toContain(
-    "Check the title and company",
+    "Check the title, company, and optional fields",
   );
   expect(onCreated).not.toHaveBeenCalled();
 });
