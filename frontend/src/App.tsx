@@ -1,40 +1,10 @@
 import { useEffect, useState } from "react";
 import AddJobForm from "./AddJobForm";
-
-type Job = {
-  id: string;
-  title: string;
-  company: string;
-  review_status: "to_review" | "interested" | "not_interested";
-  application_status:
-    | "not_applied"
-    | "applied"
-    | "interviewing"
-    | "offer"
-    | "rejected"
-    | "withdrawn";
-};
-
-type JobPage = {
-  items: Job[];
-  total: number;
-  limit: number;
-  offset: number;
-};
-
-const statusLabels = {
-  to_review: "To review",
-  interested: "Interested",
-  not_interested: "Not interested",
-  not_applied: "Not applied",
-  applied: "Applied",
-  interviewing: "Interviewing",
-  offer: "Offer",
-  rejected: "Rejected",
-  withdrawn: "Withdrawn",
-};
+import JobDetails from "./JobDetails";
+import { statusLabels, type JobPage } from "./jobs";
 
 export default function App() {
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [refresh, setRefresh] = useState(0);
   const [page, setPage] = useState<JobPage | null>(null);
@@ -86,6 +56,18 @@ export default function App() {
     setRefresh((current) => current + 1);
   }
 
+  if (selectedJobId !== null) {
+    return (
+      <main>
+        <p className="brand">JobTrack</p>
+        <JobDetails
+          jobId={selectedJobId}
+          onBack={() => setSelectedJobId(null)}
+        />
+      </main>
+    );
+  }
+
   return (
     <main>
       <p className="brand">JobTrack</p>
@@ -114,7 +96,15 @@ export default function App() {
             <ul className="job-list">
               {page.items.map((job) => (
                 <li key={job.id}>
-                  <h3>{job.title}</h3>
+                  <h3>
+                    <button
+                      type="button"
+                      className="job-title"
+                      onClick={() => setSelectedJobId(job.id)}
+                    >
+                      {job.title}
+                    </button>
+                  </h3>
                   <p>{job.company}</p>
                   <dl>
                     <div>

@@ -8,6 +8,9 @@ const jobs = Array.from({ length: 21 }, (_, index) => ({
   id: String(index + 1),
   title: `Developer ${index + 1}`,
   company: "Example AB",
+  location: null,
+  notes: null,
+  preferred_url: null,
   review_status: "interested",
   application_status: "not_applied",
 }));
@@ -153,4 +156,26 @@ test("adding a job refreshes the first page even when already on it", async () =
   await screen.findByRole("heading", { name: "Developer 1" });
   expect(fetchMock.mock.calls[1][1]?.method).toBe("POST");
   expect(fetchMock.mock.calls[2][0]).toBe("/api/jobs?limit=20&offset=0");
+});
+
+test("opens a job from page two and returns to the same list page", async () => {
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 21))
+    .mockResolvedValueOnce(jobPage(20, 21))
+    .mockResolvedValueOnce(Response.json(jobs[20]));
+  render(<App />);
+  await screen.findByText("Showing 1–20 of 21 jobs.");
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText("Showing 21–21 of 21 jobs.");
+
+  fireEvent.click(screen.getByRole("button", { name: "Developer 21" }));
+
+  await screen.findByText("No notes yet.");
+  expect(fetchMock.mock.calls[2][0]).toBe("/api/jobs/21");
+  expect(screen.queryByRole("navigation", { name: "Job pages" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Back to jobs" }));
+
+  expect(screen.getByText("Showing 21–21 of 21 jobs.")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Developer 21" })).toBeTruthy();
+  expect(fetchMock).toHaveBeenCalledTimes(3);
 });
