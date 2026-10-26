@@ -133,3 +133,24 @@ test("Next and Previous request the correct pages and respect the ends", async (
     screen.getByRole("button", { name: "Next" }).hasAttribute("disabled"),
   ).toBe(false);
 });
+
+test("adding a job refreshes the first page even when already on it", async () => {
+  fetchMock
+    .mockResolvedValueOnce(jobPage(0, 0))
+    .mockResolvedValueOnce(Response.json({ id: "1" }, { status: 201 }))
+    .mockResolvedValueOnce(jobPage(0, 1));
+  render(<App />);
+  await screen.findByText("No jobs recorded yet.");
+  fireEvent.change(screen.getByLabelText("Job title"), {
+    target: { value: "Developer 1" },
+  });
+  fireEvent.change(screen.getByLabelText("Company"), {
+    target: { value: "Example AB" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Add job" }));
+
+  await screen.findByRole("heading", { name: "Developer 1" });
+  expect(fetchMock.mock.calls[1][1]?.method).toBe("POST");
+  expect(fetchMock.mock.calls[2][0]).toBe("/api/jobs?limit=20&offset=0");
+});

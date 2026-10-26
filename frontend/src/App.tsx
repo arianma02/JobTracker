@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AddJobForm from "./AddJobForm";
 
 type Job = {
   id: string;
@@ -35,6 +36,7 @@ const statusLabels = {
 
 export default function App() {
   const [offset, setOffset] = useState(0);
+  const [refresh, setRefresh] = useState(0);
   const [page, setPage] = useState<JobPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,13 +78,20 @@ export default function App() {
 
     // Cancel the old request when the offset changes or the page is removed.
     return () => controller.abort();
-  }, [offset]);
+  }, [offset, refresh]);
+
+  function jobCreated() {
+    setOffset(0);
+    // Refresh even when we are already on the first page.
+    setRefresh((current) => current + 1);
+  }
 
   return (
     <main>
       <p className="brand">JobTrack</p>
       <h1>My Jobs</h1>
       <p>Keep track of vacancies, your decisions, and your applications.</p>
+      <AddJobForm onCreated={jobCreated} />
       <section aria-label="Job list">
         {loading && <p role="status">Loading your jobs…</p>}
         {error && <p role="alert">{error}</p>}
