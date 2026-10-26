@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 import psycopg
@@ -23,6 +24,24 @@ class JobCreate(BaseModel):
         # Trim before checking lengths, so whitespace alone is not a valid title.
         if isinstance(value, str):
             return value.strip()
+        return value
+
+
+class JobPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    notes: str | None = Field(default=None, max_length=20000)
+    review_status: Literal["to_review", "interested", "not_interested"] | None = None
+    application_status: Literal[
+        "not_applied", "applied", "interviewing", "offer", "rejected", "withdrawn"
+    ] | None = None
+
+    @field_validator("review_status", "application_status")
+    @classmethod
+    def status_cannot_be_cleared(cls, value):
+        # Omitted defaults are not validated; an explicitly submitted null is.
+        if value is None:
+            raise ValueError("Status cannot be null")
         return value
 
 
@@ -108,3 +127,48 @@ def get_job(job_id: UUID):
         raise HTTPException(status_code=404, detail="Job not found")
 
     return job
+
+
+@app.patch("/api/jobs/{job_id}")
+def update_job(job_id: UUID, job: JobPatch):
+    changes = job.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(status_code=422, detail="Provide notes or a status to update")
+
+    try:
+        with get_connection() as connection:
+            with connection.cursor() as cursor:
+                # Keep the row locked until this transaction finishes its update.
+                cursor.execute("SELECT * FROM jobs WHERE id = %s FOR UPDATE", (job_id,))
+                current_job = cursor.fetchone()
+                if current_job is None:
+                    raise HTTPException(status_code=404, detail="Job not found")
+
+                notes = current_job["notes"]
+                review_status = current_job["review_status"]
+                application_status = current_job["application_status"]
+
+                if "notes" in changes:
+                    notes = changes["notes"]
+                if "review_status" in changes:
+                    review_status = changes["review_status"]
+                if "application_status" in changes:
+                    application_status = changes["application_status"]
+
+                cursor.execute(
+                    """
+                    UPDATE jobs
+                    SET notes = %s,
+                        review_status = %s,
+                        application_status = %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    RETURNING *
+                    """,
+                    (notes, review_status, application_status, job_id),
+                )
+                updated_job = cursor.fetchone()
+    except psycopg.OperationalError:
+        raise HTTPException(status_code=503, detail="Database unavailable") from None
+
+    return updated_job
